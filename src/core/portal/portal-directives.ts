@@ -1,12 +1,12 @@
 import {
+    NgModule,
     ComponentRef,
     Directive,
     TemplateRef,
-    ComponentResolver,
+    ComponentFactoryResolver,
     ViewContainerRef
 } from '@angular/core';
 import {Portal, TemplatePortal, ComponentPortal, BasePortalHost} from './portal';
-
 
 
 /**
@@ -45,7 +45,7 @@ export class PortalHostDirective extends BasePortalHost {
   private _portal: Portal<any>;
 
   constructor(
-      private _componentResolver: ComponentResolver,
+      private _componentFactoryResolver: ComponentFactoryResolver,
       private _viewContainerRef: ViewContainerRef) {
     super();
   }
@@ -58,7 +58,7 @@ export class PortalHostDirective extends BasePortalHost {
     this._replaceAttachedPortal(p);
   }
 
-  /** Attach the given ComponentPortal to this PortlHost using the ComponentResolver. */
+  /** Attach the given ComponentPortal to this PortlHost using the ComponentFactoryResolver. */
   attachComponentPortal<T>(portal: ComponentPortal<T>): Promise<ComponentRef<T>> {
     portal.setAttachedHost(this);
 
@@ -68,14 +68,14 @@ export class PortalHostDirective extends BasePortalHost {
         portal.viewContainerRef :
         this._viewContainerRef;
 
-    return this._componentResolver.resolveComponent(portal.component).then(componentFactory => {
-      let ref = viewContainerRef.createComponent(
-          componentFactory, viewContainerRef.length,
-          portal.injector || viewContainerRef.parentInjector);
+    let componentFactory =
+        this._componentFactoryResolver.resolveComponentFactory(portal.component);
+    let ref = viewContainerRef.createComponent(
+        componentFactory, viewContainerRef.length,
+        portal.injector || viewContainerRef.parentInjector);
 
-      this.setDisposeFn(() => ref.destroy());
-      return ref;
-    });
+    this.setDisposeFn(() => ref.destroy());
+    return Promise.resolve(ref);
   }
 
   /** Attach the given TemplatePortal to this PortlHost as an embedded View. */
@@ -103,3 +103,10 @@ export class PortalHostDirective extends BasePortalHost {
 }
 
 export const PORTAL_DIRECTIVES = [TemplatePortalDirective, PortalHostDirective];
+
+
+@NgModule({
+  exports: PORTAL_DIRECTIVES,
+  declarations: PORTAL_DIRECTIVES,
+})
+export class PortalModule { }

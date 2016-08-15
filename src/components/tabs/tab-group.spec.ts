@@ -2,16 +2,31 @@ import {
     inject,
     async,
     fakeAsync,
-    tick
+    tick,
+    TestComponentBuilder,
+    ComponentFixture,
+    TestBed,
 } from '@angular/core/testing';
-import {TestComponentBuilder, ComponentFixture} from '@angular/compiler/testing';
-import {MD_TABS_DIRECTIVES, MdTabGroup} from './tabs';
+import {MdTabGroup, MdTabsModule} from './tabs';
 import {Component} from '@angular/core';
 import {By} from '@angular/platform-browser';
 import {Observable} from 'rxjs/Observable';
 
+
 describe('MdTabGroup', () => {
   let builder: TestComponentBuilder;
+
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      imports: [MdTabsModule],
+      declarations: [
+        SimpleTabsTestApp,
+        AsyncTabsTestApp,
+      ],
+    });
+
+    TestBed.compileComponents();
+  }));
 
   beforeEach(inject([TestComponentBuilder], (tcb: TestComponentBuilder) => {
     builder = tcb;
@@ -26,11 +41,11 @@ describe('MdTabGroup', () => {
       });
     }));
 
-    it('should default to the first tab', () => {
+    it('should default to the first tab', async(() => {
       checkSelectedIndex(1, fixture);
-    });
+    }));
 
-    it('should change selected index on click', () => {
+    it('should change selected index on click', async(() => {
       let component = fixture.debugElement.componentInstance;
       component.selectedIndex = 0;
       checkSelectedIndex(0, fixture);
@@ -44,7 +59,7 @@ describe('MdTabGroup', () => {
       tabLabel = fixture.debugElement.queryAll(By.css('.md-tab-label'))[2];
       tabLabel.nativeElement.click();
       checkSelectedIndex(2, fixture);
-    });
+    }));
 
     it('should support two-way binding for selectedIndex', async(() => {
       let component = fixture.componentInstance;
@@ -61,8 +76,7 @@ describe('MdTabGroup', () => {
       });
     }));
 
-    it('should cycle through tab focus with focusNextTab/focusPreviousTab functions',
-        fakeAsync(() => {
+    it('should cycle tab focus with focusNextTab/focusPreviousTab functions', fakeAsync(() => {
       let testComponent = fixture.componentInstance;
       let tabComponent = fixture.debugElement.query(By.css('md-tab-group')).componentInstance;
 
@@ -137,14 +151,98 @@ describe('MdTabGroup', () => {
     }));
   });
 
+  describe('disabled tabs', () => {
+    let fixture: ComponentFixture<DisabledTabsTestApp>;
+
+    beforeEach(async(() => {
+      builder.createAsync(DisabledTabsTestApp).then(f => {
+        fixture = f;
+        fixture.detectChanges();
+      });
+    }));
+
+    it('should disable the second tab', () => {
+      let labels = fixture.debugElement.queryAll(By.css('.md-tab-label'));
+
+      expect(labels[1].nativeElement.classList.contains('md-tab-disabled')).toBeTruthy();
+    });
+
+    it('should skip over disabled tabs when navigating by keyboard', () => {
+      let component: MdTabGroup = fixture.debugElement.query(By.css('md-tab-group'))
+          .componentInstance;
+
+      component.focusIndex = 0;
+      component.focusNextTab();
+
+      expect(component.focusIndex).toBe(2);
+
+      component.focusNextTab();
+      expect(component.focusIndex).toBe(2);
+
+      component.focusPreviousTab();
+      expect(component.focusIndex).toBe(0);
+
+      component.focusPreviousTab();
+      expect(component.focusIndex).toBe(0);
+    });
+
+    it('should ignore attempts to select a disabled tab', () => {
+      let component: MdTabGroup = fixture.debugElement.query(By.css('md-tab-group'))
+          .componentInstance;
+
+      component.selectedIndex = 0;
+      expect(component.selectedIndex).toBe(0);
+
+      component.selectedIndex = 1;
+      expect(component.selectedIndex).toBe(0);
+    });
+
+    it('should ignore attempts to focus a disabled tab', () => {
+      let component: MdTabGroup = fixture.debugElement.query(By.css('md-tab-group'))
+          .componentInstance;
+
+      component.focusIndex = 0;
+      expect(component.focusIndex).toBe(0);
+
+      component.focusIndex = 1;
+      expect(component.focusIndex).toBe(0);
+    });
+
+    it('should ignore attempts to set invalid selectedIndex', () => {
+      let component: MdTabGroup = fixture.debugElement.query(By.css('md-tab-group'))
+          .componentInstance;
+
+      component.selectedIndex = 0;
+      expect(component.selectedIndex).toBe(0);
+
+      component.selectedIndex = -1;
+      expect(component.selectedIndex).toBe(0);
+
+      component.selectedIndex = 4;
+      expect(component.selectedIndex).toBe(0);
+    });
+
+    it('should ignore attempts to set invalid focusIndex', () => {
+      let component: MdTabGroup = fixture.debugElement.query(By.css('md-tab-group'))
+          .componentInstance;
+
+      component.focusIndex = 0;
+      expect(component.focusIndex).toBe(0);
+
+      component.focusIndex = -1;
+      expect(component.focusIndex).toBe(0);
+
+      component.focusIndex = 4;
+      expect(component.focusIndex).toBe(0);
+    });
+  });
+
   describe('async tabs', () => {
     let fixture: ComponentFixture<AsyncTabsTestApp>;
 
-    beforeEach(async(() => {
-      builder.createAsync(AsyncTabsTestApp).then(f => fixture = f);
-    }));
-
     it('should show tabs when they are available', async(() => {
+      fixture = TestBed.createComponent(AsyncTabsTestApp);
+
       let labels = fixture.debugElement.queryAll(By.css('.md-tab-label'));
 
       expect(labels.length).toBe(0);
@@ -161,7 +259,7 @@ describe('MdTabGroup', () => {
 
   /**
    * Checks that the `selectedIndex` has been updated; checks that the label and body have the
-   * `md-active` class
+   * `md-tab-active` class
    */
   function checkSelectedIndex(index: number, fixture: ComponentFixture<any>) {
     fixture.detectChanges();
@@ -172,11 +270,11 @@ describe('MdTabGroup', () => {
 
     let tabLabelElement = fixture.debugElement
         .query(By.css(`.md-tab-label:nth-of-type(${index + 1})`)).nativeElement;
-    expect(tabLabelElement.classList.contains('md-active')).toBe(true);
+    expect(tabLabelElement.classList.contains('md-tab-active')).toBe(true);
 
     let tabContentElement = fixture.debugElement
         .query(By.css(`#${tabLabelElement.id}`)).nativeElement;
-    expect(tabContentElement.classList.contains('md-active')).toBe(true);
+    expect(tabContentElement.classList.contains('md-tab-active')).toBe(true);
   }
 });
 
@@ -200,8 +298,7 @@ describe('MdTabGroup', () => {
         <template md-tab-content>Tab three content</template>
       </md-tab>
     </md-tab-group>
-  `,
-  directives: [MD_TABS_DIRECTIVES]
+  `
 })
 class SimpleTabsTestApp {
   selectedIndex: number = 1;
@@ -219,13 +316,33 @@ class SimpleTabsTestApp {
   selector: 'test-app',
   template: `
     <md-tab-group class="tab-group">
+      <md-tab>
+        <template md-tab-label>Tab One</template>
+        <template md-tab-content>Tab one content</template>
+      </md-tab>
+      <md-tab disabled>
+        <template md-tab-label>Tab Two</template>
+        <template md-tab-content>Tab two content</template>
+      </md-tab>
+      <md-tab>
+        <template md-tab-label>Tab Three</template>
+        <template md-tab-content>Tab three content</template>
+      </md-tab>
+    </md-tab-group>
+  `,
+})
+class DisabledTabsTestApp {}
+
+@Component({
+  selector: 'test-app',
+  template: `
+    <md-tab-group class="tab-group">
       <md-tab *ngFor="let tab of tabs | async">
         <template md-tab-label>{{ tab.label }}</template>
         <template md-tab-content>{{ tab.content }}</template>
       </md-tab>
    </md-tab-group>
-  `,
-  directives: [MD_TABS_DIRECTIVES]
+  `
 })
 class AsyncTabsTestApp {
   private _tabs = [
@@ -235,7 +352,8 @@ class AsyncTabsTestApp {
 
   tabs: Observable<any>;
 
-  constructor() {
+  // Use ngOnInit because there is some issue with scheduling the async task in the constructor.
+  ngOnInit() {
     this.tabs = Observable.create((observer: any) => {
       requestAnimationFrame(() => observer.next(this._tabs));
     });

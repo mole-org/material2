@@ -1,4 +1,5 @@
 import {
+    NgModule,
     Component,
     ContentChildren,
     Directive,
@@ -15,6 +16,7 @@ import {
 import {
     NG_VALUE_ACCESSOR,
     ControlValueAccessor,
+    FormsModule,
 } from '@angular/forms';
 import {Observable} from 'rxjs/Observable';
 import {
@@ -301,10 +303,6 @@ export class MdButtonToggle implements OnInit {
         // Notify all button toggles with the same name (in the same group) to un-check.
         this.buttonToggleDispatcher.notify(this.id, this.name);
       }
-
-      if (newCheckedState != this._checked) {
-        this._emitChangeEvent();
-      }
     }
 
     this._checked = newCheckedState;
@@ -366,11 +364,37 @@ export class MdButtonToggle implements OnInit {
     } else {
       this._toggle();
     }
+
+    // Emit a change event when the native input does.
+    this._emitChangeEvent();
+  }
+
+  /** TODO: internal */
+  _onInputClick(event: Event) {
+
+    // We have to stop propagation for click events on the visual hidden input element.
+    // By default, when a user clicks on a label element, a generated click event will be
+    // dispatched on the associated input element. Since we are using a label element as our
+    // root container, the click event on the `slide-toggle` will be executed twice.
+    // The real click event will bubble up, and the generated click event also tries to bubble up.
+    // This will lead to multiple click events.
+    // Preventing bubbling for the second event will solve that issue.
+    event.stopPropagation();
   }
 }
 
+/** @deprecated */
 export const MD_BUTTON_TOGGLE_DIRECTIVES = [
   MdButtonToggleGroup,
   MdButtonToggleGroupMultiple,
   MdButtonToggle
 ];
+
+
+@NgModule({
+  imports: [FormsModule],
+  exports: MD_BUTTON_TOGGLE_DIRECTIVES,
+  declarations: MD_BUTTON_TOGGLE_DIRECTIVES,
+  providers: [MdUniqueSelectionDispatcher],
+})
+export class MdButtonToggleModule { }

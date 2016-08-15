@@ -1,65 +1,47 @@
-import {
-  inject,
-  fakeAsync,
-  flushMicrotasks,
-  addProviders,
-} from '@angular/core/testing';
-import {TestComponentBuilder} from '@angular/compiler/testing';
-import {
-  Component,
-  ViewChild,
-  ViewContainerRef,
-} from '@angular/core';
-import {TemplatePortalDirective} from '../portal/portal-directives';
+import {inject, fakeAsync, flushMicrotasks, TestBed, async} from '@angular/core/testing';
+import {NgModule, Component, ViewChild, ViewContainerRef} from '@angular/core';
+import {TemplatePortalDirective, PortalModule} from '../portal/portal-directives';
 import {TemplatePortal, ComponentPortal} from '../portal/portal';
 import {Overlay} from './overlay';
 import {OverlayContainer} from './overlay-container';
 import {OverlayRef} from './overlay-ref';
 import {OverlayState} from './overlay-state';
 import {PositionStrategy} from './position/position-strategy';
-import {OverlayPositionBuilder} from './position/overlay-position-builder';
-import {ViewportRuler} from './position/viewport-ruler';
+import {OverlayModule} from './overlay-directives';
 
 
 describe('Overlay', () => {
-  let builder: TestComponentBuilder;
   let overlay: Overlay;
   let componentPortal: ComponentPortal<PizzaMsg>;
   let templatePortal: TemplatePortal;
   let overlayContainerElement: HTMLElement;
 
-  beforeEach(() => {
-    addProviders([
-      Overlay,
-      OverlayPositionBuilder,
-      ViewportRuler,
-      {provide: OverlayContainer, useFactory: () => {
-        return {
-          getContainerElement: () => {
-            if (overlayContainerElement) { return overlayContainerElement; }
-            overlayContainerElement = document.createElement('div');
-            return overlayContainerElement;
-          }
-        };
-      }}
-    ]);
-  });
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      imports: [OverlayModule, PortalModule, OverlayTestModule],
+      providers: [
+        {provide: OverlayContainer, useFactory: () => {
+          overlayContainerElement = document.createElement('div');
+          return {getContainerElement: () => overlayContainerElement};
+        }}
+      ]
+    });
 
-  let deps = [TestComponentBuilder, Overlay];
-  beforeEach(inject(deps, fakeAsync((tcb: TestComponentBuilder, o: Overlay) => {
-    builder = tcb;
+    TestBed.compileComponents();
+  }));
+
+  beforeEach(fakeAsync(inject([Overlay], (o: Overlay) => {
     overlay = o;
 
-    builder.createAsync(TestComponentWithTemplatePortals).then(fixture => {
-      fixture.detectChanges();
-      templatePortal = fixture.componentInstance.templatePortal;
-      componentPortal = new ComponentPortal(PizzaMsg, fixture.componentInstance.viewContainerRef);
-    });
+    let fixture = TestBed.createComponent(TestComponentWithTemplatePortals);
+    fixture.detectChanges();
+    templatePortal = fixture.componentInstance.templatePortal;
+    componentPortal = new ComponentPortal(PizzaMsg, fixture.componentInstance.viewContainerRef);
 
     flushMicrotasks();
   })));
 
-  it('should load a component into an overlay', fakeAsyncTest(() => {
+  it('should load a component into an overlay', fakeAsync(() => {
     let overlayRef: OverlayRef;
 
     overlay.create().then(ref => {
@@ -76,7 +58,7 @@ describe('Overlay', () => {
     expect(overlayContainerElement.textContent).toBe('');
   }));
 
-  it('should load a template portal into an overlay', fakeAsyncTest(() => {
+  it('should load a template portal into an overlay', fakeAsync(() => {
     let overlayRef: OverlayRef;
 
     overlay.create().then(ref => {
@@ -93,7 +75,7 @@ describe('Overlay', () => {
     expect(overlayContainerElement.textContent).toBe('');
   }));
 
-  it('should open multiple overlays', fakeAsyncTest(() => {
+  it('should open multiple overlays', fakeAsync(() => {
     let pizzaOverlayRef: OverlayRef;
     let cakeOverlayRef: OverlayRef;
 
@@ -131,7 +113,7 @@ describe('Overlay', () => {
       state = new OverlayState();
     });
 
-    it('should apply the positioning strategy', fakeAsyncTest(() => {
+    it('should apply the positioning strategy', fakeAsync(() => {
       state.positionStrategy = new FakePositionStrategy();
 
       overlay.create(state).then(ref => {
@@ -147,26 +129,28 @@ describe('Overlay', () => {
 
 
 /** Simple component for testing ComponentPortal. */
-@Component({
-  selector: 'pizza-msg',
-  template: '<p>Pizza</p>',
-})
-class PizzaMsg {
-}
+@Component({template: '<p>Pizza</p>'})
+class PizzaMsg { }
 
 
 /** Test-bed component that contains a TempatePortal and an ElementRef. */
-@Component({
-  selector: 'portal-test',
-  template: `<template portal>Cake</template>`,
-  directives: [TemplatePortalDirective],
-})
+@Component({template: `<template portal>Cake</template>`})
 class TestComponentWithTemplatePortals {
   @ViewChild(TemplatePortalDirective) templatePortal: TemplatePortalDirective;
 
-  constructor(public viewContainerRef: ViewContainerRef) {
-  }
+  constructor(public viewContainerRef: ViewContainerRef) { }
 }
+
+// Create a real (non-test) NgModule as a workaround for
+// https://github.com/angular/angular/issues/10760
+const TEST_COMPONENTS = [PizzaMsg, TestComponentWithTemplatePortals];
+@NgModule({
+  imports: [OverlayModule, PortalModule],
+  exports: TEST_COMPONENTS,
+  declarations: TEST_COMPONENTS,
+  entryComponents: TEST_COMPONENTS,
+})
+class OverlayTestModule { }
 
 class FakePositionStrategy implements PositionStrategy {
   apply(element: Element): Promise<void> {
@@ -176,6 +160,3 @@ class FakePositionStrategy implements PositionStrategy {
 
 }
 
-function fakeAsyncTest(fn: () => void) {
-  return inject([], fakeAsync(fn));
-}

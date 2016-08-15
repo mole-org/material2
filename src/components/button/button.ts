@@ -6,10 +6,12 @@ import {
   ChangeDetectionStrategy,
   ElementRef,
   Renderer,
-  Type,
+  NgModule,
 } from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {BooleanFieldValue} from '@angular2-material/core/annotations/field-value';
+import {MdRippleModule} from '@angular2-material/core/ripple/ripple';
 
-// TODO(jelbourn): Ink ripples.
 // TODO(jelbourn): Make the `isMouseDown` stuff done with one global listener.
 // TODO(kara): Convert attribute selectors to classes when attr maps become available
 
@@ -38,6 +40,9 @@ export class MdButton {
 
   /** Whether a mousedown has occurred on this element in the last 100ms. */
   _isMouseDown: boolean = false;
+
+  /** Whether the ripple effect on click should be disabled. */
+  @Input() @BooleanFieldValue() disableRipple: boolean = false;
 
   constructor(private _elementRef: ElementRef, private _renderer: Renderer) { }
 
@@ -81,6 +86,21 @@ export class MdButton {
   /** TODO(hansl): e2e test this function. */
   focus() {
     this._elementRef.nativeElement.focus();
+  }
+
+  getHostElement() {
+    return this._elementRef.nativeElement;
+  }
+
+  isRoundButton() {
+    const el = this._elementRef.nativeElement;
+    return el.hasAttribute('md-icon-button') ||
+        el.hasAttribute('md-fab') ||
+        el.hasAttribute('md-mini-fab');
+  }
+
+  isRippleEnabled() {
+    return !this.disableRipple;
   }
 }
 
@@ -136,4 +156,13 @@ export class MdAnchor extends MdButton {
 }
 
 
-export const MD_BUTTON_DIRECTIVES: Type[] = [MdButton, MdAnchor];
+/** @deprecated */
+export const MD_BUTTON_DIRECTIVES: any[] = [MdButton, MdAnchor];
+
+
+@NgModule({
+  imports: [CommonModule, MdRippleModule],
+  exports: MD_BUTTON_DIRECTIVES,
+  declarations: MD_BUTTON_DIRECTIVES,
+})
+export class MdButtonModule { }

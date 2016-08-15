@@ -1,49 +1,30 @@
-import {
-    inject,
-    async,
-    fakeAsync,
-    flushMicrotasks,
-    addProviders,
-} from '@angular/core/testing';
-import {TestComponentBuilder, ComponentFixture} from '@angular/compiler/testing';
+import {async, fakeAsync, flushMicrotasks, ComponentFixture, TestBed} from '@angular/core/testing';
 import {Component, ViewChild} from '@angular/core';
-import {ConnectedOverlayDirective, OverlayOrigin} from './overlay-directives';
-import {Overlay} from './overlay';
+import {ConnectedOverlayDirective, OverlayModule} from './overlay-directives';
 import {OverlayContainer} from './overlay-container';
-import {ViewportRuler} from './position/viewport-ruler';
-import {OverlayPositionBuilder} from './position/overlay-position-builder';
 import {ConnectedPositionStrategy} from './position/connected-position-strategy';
 
+
 describe('Overlay directives', () => {
-  let builder: TestComponentBuilder;
   let overlayContainerElement: HTMLElement;
   let fixture: ComponentFixture<ConnectedOverlayDirectiveTest>;
 
-  beforeEach(() => {
-    addProviders([
-      Overlay,
-      OverlayPositionBuilder,
-      ViewportRuler,
-      {provide: OverlayContainer, useFactory: () => {
-        return {
-          getContainerElement: () => {
-           overlayContainerElement = document.createElement('div');
-            return overlayContainerElement;
-          }
-        };
-      }},
-    ]);
-  });
-
-  beforeEach(inject([TestComponentBuilder], (tcb: TestComponentBuilder) => {
-    builder = tcb;
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      imports: [OverlayModule],
+      declarations: [ConnectedOverlayDirectiveTest],
+      providers: [
+        {provide: OverlayContainer, useFactory: () => {
+          overlayContainerElement = document.createElement('div');
+          return {getContainerElement: () => overlayContainerElement};
+        }}
+      ],
+    });
   }));
 
   beforeEach(async(() => {
-    builder.createAsync(ConnectedOverlayDirectiveTest).then(f => {
-      fixture = f;
-      fixture.detectChanges();
-    });
+    fixture = TestBed.createComponent(ConnectedOverlayDirectiveTest);
+    fixture.detectChanges();
   }));
 
   it(`should create an overlay and attach the directive's template`, () => {
@@ -78,7 +59,6 @@ describe('Overlay directives', () => {
   <template connected-overlay [origin]="trigger">
     <p>Menu content</p>
   </template>`,
-  directives: [ConnectedOverlayDirective, OverlayOrigin],
 })
 class ConnectedOverlayDirectiveTest {
   @ViewChild(ConnectedOverlayDirective) connectedOverlayDirective: ConnectedOverlayDirective;

@@ -1,10 +1,11 @@
 import {
+    NgModule,
     Component,
     ChangeDetectionStrategy,
     HostBinding,
     Input,
 } from '@angular/core';
-import {NgStyle} from '@angular/common';
+import {CommonModule} from '@angular/common';
 
 // TODO(josephperrott): Benchpress tests.
 // TODO(josephperrott): Add ARIA attributes for progressbar "for".
@@ -24,7 +25,6 @@ import {NgStyle} from '@angular/common';
   templateUrl: 'progress-bar.html',
   styleUrls: ['progress-bar.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  directives: [NgStyle],
 })
 export class MdProgressBar {
   /** Value of the progressbar. Defaults to zero. Mirrored to aria-valuenow. */
@@ -86,4 +86,12 @@ function clamp(v: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, v));
 }
 
+/** @deprecated */
 export const MD_PROGRESS_BAR_DIRECTIVES = [MdProgressBar];
+
+@NgModule({
+  imports: [CommonModule],
+  exports: MD_PROGRESS_BAR_DIRECTIVES,
+  declarations: MD_PROGRESS_BAR_DIRECTIVES,
+})
+export class MdProgressBarModule { }

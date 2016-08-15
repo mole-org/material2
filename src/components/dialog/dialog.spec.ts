@@ -1,62 +1,42 @@
-import {
-  inject,
-  fakeAsync,
-  async,
-  addProviders,
-} from '@angular/core/testing';
-import {TestComponentBuilder, ComponentFixture} from '@angular/compiler/testing';
-import {
-  Component,
-  Directive,
-  ViewChild,
-  ViewContainerRef,
-  ChangeDetectorRef,
-} from '@angular/core';
-import {MdDialog} from './dialog';
-import {OVERLAY_PROVIDERS} from '@angular2-material/core/overlay/overlay';
+import {inject, fakeAsync, async, ComponentFixture, TestBed} from '@angular/core/testing';
+import {NgModule, Component, Directive, ViewChild, ViewContainerRef} from '@angular/core';
+import {MdDialog, MdDialogModule} from './dialog';
 import {OverlayContainer} from '@angular2-material/core/overlay/overlay-container';
 import {MdDialogConfig} from './dialog-config';
 import {MdDialogRef} from './dialog-ref';
 
 
-
 describe('MdDialog', () => {
-  let builder: TestComponentBuilder;
   let dialog: MdDialog;
   let overlayContainerElement: HTMLElement;
 
   let testViewContainerRef: ViewContainerRef;
   let viewContainerFixture: ComponentFixture<ComponentWithChildViewContainer>;
 
-  beforeEach(() => {
-    addProviders([
-      OVERLAY_PROVIDERS,
-      MdDialog,
-      {provide: OverlayContainer, useFactory: () => {
-        return {
-          getContainerElement: () => {
-            overlayContainerElement = document.createElement('div');
-            return overlayContainerElement;
-          }
-        };
-      }},
-    ]);
-  });
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      imports: [MdDialogModule, DialogTestModule],
+      providers: [
+        {provide: OverlayContainer, useFactory: () => {
+          overlayContainerElement = document.createElement('div');
+          return {getContainerElement: () => overlayContainerElement};
+        }}
+      ],
+    });
 
-  let deps = [TestComponentBuilder, MdDialog];
-  beforeEach(inject(deps, fakeAsync((tcb: TestComponentBuilder, d: MdDialog) => {
-    builder = tcb;
+    TestBed.compileComponents();
+  }));
+
+  beforeEach(inject([MdDialog], fakeAsync((d: MdDialog) => {
     dialog = d;
   })));
 
-  beforeEach(async(() => {
-    builder.createAsync(ComponentWithChildViewContainer).then(fixture => {
-      viewContainerFixture = fixture;
+  beforeEach(() => {
+    viewContainerFixture = TestBed.createComponent(ComponentWithChildViewContainer);
 
-      viewContainerFixture.detectChanges();
-      testViewContainerRef = fixture.componentInstance.childViewContainer;
-    });
-  }));
+    viewContainerFixture.detectChanges();
+    testViewContainerRef = viewContainerFixture.componentInstance.childViewContainer;
+  });
 
   it('should open a dialog with a component', async(() => {
     let config = new MdDialogConfig();
@@ -133,12 +113,9 @@ class DirectiveWithViewContainer {
 @Component({
   selector: 'arbitrary-component',
   template: `<dir-with-view-container></dir-with-view-container>`,
-  directives: [DirectiveWithViewContainer],
 })
 class ComponentWithChildViewContainer {
   @ViewChild(DirectiveWithViewContainer) childWithViewContainer: DirectiveWithViewContainer;
-
-  constructor(public changeDetectorRef: ChangeDetectorRef) { }
 
   get childViewContainer() {
     return this.childWithViewContainer.viewContainerRef;
@@ -153,3 +130,14 @@ class ComponentWithChildViewContainer {
 class PizzaMsg {
   constructor(public dialogRef: MdDialogRef<PizzaMsg>) { }
 }
+
+// Create a real (non-test) NgModule as a workaround for
+// https://github.com/angular/angular/issues/10760
+const TEST_DIRECTIVES = [ComponentWithChildViewContainer, PizzaMsg, DirectiveWithViewContainer];
+@NgModule({
+  imports: [MdDialogModule],
+  exports: TEST_DIRECTIVES,
+  declarations: TEST_DIRECTIVES,
+  entryComponents: [ComponentWithChildViewContainer, PizzaMsg],
+})
+class DialogTestModule { }

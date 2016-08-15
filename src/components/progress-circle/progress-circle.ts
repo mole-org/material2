@@ -1,4 +1,5 @@
 import {
+  NgModule,
   Component,
   HostBinding,
   ChangeDetectorRef,
@@ -158,9 +159,8 @@ export class MdProgressCircle implements OnDestroy {
     if (animateTo === animateFrom) {
       this.currentPath = getSvgArc(animateTo, rotation);
     } else {
-      let animation = (currentTime: number) => {
-        let elapsedTime = Math.max(
-          0, Math.min((currentTime || Date.now()) - startTime, duration));
+      let animation = () => {
+        let elapsedTime = Math.max(0, Math.min(Date.now() - startTime, duration));
 
         this.currentPath = getSvgArc(
           ease(elapsedTime, animateFrom, changeInValue, duration),
@@ -313,4 +313,12 @@ function getSvgArc(currentValue: number, rotation: number) {
   return `M${start}A${pathRadius},${pathRadius} 0 ${largeArcFlag},${arcSweep} ${end}`;
 }
 
+/** @deprecated */
 export const MD_PROGRESS_CIRCLE_DIRECTIVES = [MdProgressCircle, MdSpinner];
+
+
+@NgModule({
+  exports: MD_PROGRESS_CIRCLE_DIRECTIVES,
+  declarations: MD_PROGRESS_CIRCLE_DIRECTIVES,
+})
+export class MdProgressCircleModule { }
